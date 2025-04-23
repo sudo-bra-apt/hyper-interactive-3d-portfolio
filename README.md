@@ -42,4 +42,4 @@ Feel free to fork and make it your own! PRs are welcome.
 MIT License
 
 ---
-Created with 💡 by [Your Name]
+Created with 💡 by ProDevStudio
