@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hyper-Interactive 3D Portfolio</title>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #111;
+      font-family: 'Arial', sans-serif;
+      color: white;
+    }
+    #loader {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2em;
+      flex-direction: column;
+    }
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 5px solid rgba(255,255,255,0.2);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 1em;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    #overlay {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 10;
+    }
+    .unlock-message {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.7);
+      padding: 1em 2em;
+      border-radius: 10px;
+      display: none;
+    }
+    #hud {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 10;
+      background: rgba(0,0,0,0.6);
+      padding: 1em;
+      border-radius: 8px;
+    }
+    #xpBar {
+      margin-top: 10px;
+      height: 10px;
+      background: #333;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+    #xpFill {
+      height: 100%;
+      width: 0%;
+      background: limegreen;
+      transition: width 0.3s;
+    }
+    #projectDesc {
+      position: absolute;
+      bottom: 60px;
+      left: 10px;
+      max-width: 250px;
+      background: rgba(0,0,0,0.7);
+      padding: 1em;
+      border-radius: 10px;
+      display: none;
+    }
+    #trophy {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0);
+      transition: transform 0.5s ease;
+      font-size: 4em;
+      color: gold;
+      z-index: 999;
+    }
+  </style>
+</head>
+<body>
+  <div id="loader">
+    <div class="spinner"></div>
+    Loading Experience...
+  </div>
+  <div id="overlay">
+    <h1>🚀 Hyper-Interactive 3D Portfolio</h1>
+    <p>Use mouse or touch to explore. Click on 3D models to unlock projects.</p>
+  </div>
+  <div id="hud">
+    <p><strong>Mini HUD</strong></p>
+    <p>Unlocked: <span id="unlockedCount">0</span>/3</p>
+    <div id="xpBar"><div id="xpFill"></div></div>
+  </div>
+  <div id="unlockMessage" class="unlock-message"></div>
+  <div id="projectDesc"></div>
+  <div id="trophy">🏆</div>
+  <canvas id="scene"></canvas>
+
+  <audio id="unlockSound" src="https://freesound.org/data/previews/320/320655_5260877-lq.mp3"></audio>
+
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+
+  <script>
+    const canvas = document.getElementById('scene');
+    const renderer = new THREE.WebGLRenderer({ canvas });
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 1.5, 5);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    directionalLight.position.set(5, 10, 7.5);
+    scene.add(ambientLight, directionalLight);
+
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    const projects = [];
+    let unlockedCount = 0;
+    const loader = new THREE.GLTFLoader();
+    const unlockSound = document.getElementById('unlockSound');
+    const descriptions = [
+      "Project 1: Next-gen helmet UI design for games.",
+      "Project 2: Flamingo-based AI assistant concept.",
+      "Project 3: Horsepower-enhanced productivity tool."
+    ];
+
+    function loadModel(url, position, scale, descIndex) {
+      loader.load(url, (gltf) => {
+        const model = gltf.scene;
+        model.position.copy(position);
+        model.scale.set(scale, scale, scale);
+        model.userData.unlocked = false;
+        model.userData.descIndex = descIndex;
+        scene.add(model);
+        projects.push(model);
+        if (projects.length === 3) document.getElementById('loader').style.display = 'none';
+      });
+    }
+
+    loadModel('https://threejs.org/examples/models/gltf/DamagedHelmet/glTF/DamagedHelmet.gltf', new THREE.Vector3(-2, 0, 0), 1, 0);
+    loadModel('https://threejs.org/examples/models/gltf/Flamingo.glb', new THREE.Vector3(0, 0, 0), 0.05, 1);
+    loadModel('https://threejs.org/examples/models/gltf/Horse.glb', new THREE.Vector3(2, 0, 0), 1, 2);
+
+    function showUnlockMessage(text) {
+      const msg = document.getElementById('unlockMessage');
+      msg.innerText = text;
+      msg.style.display = 'block';
+      setTimeout(() => msg.style.display = 'none', 3000);
+    }
+
+    function showTrophy() {
+      const trophy = document.getElementById('trophy');
+      trophy.style.transform = 'translate(-50%, -50%) scale(1)';
+      setTimeout(() => {
+        trophy.style.transform = 'translate(-50%, -50%) scale(0)';
+      }, 3000);
+    }
+
+    function updateHUD() {
+      document.getElementById('unlockedCount').innerText = unlockedCount;
+      document.getElementById('xpFill').style.width = `${(unlockedCount / projects.length) * 100}%`;
+    }
+
+    function showDescription(index) {
+      const box = document.getElementById('projectDesc');
+      box.innerText = descriptions[index];
+      box.style.display = 'block';
+    }
+
+    function teleportToProject(index) {
+      if (projects[index]) {
+        const pos = projects[index].position;
+        camera.position.set(pos.x, pos.y + 1.5, pos.z + 3);
+        controls.target.copy(pos);
+      }
+    }
+
+    canvas.addEventListener('click', (event) => {
+      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(projects, true);
+      if (intersects.length > 0) {
+        const obj = intersects[0].object;
+        const root = projects.find(p => p === obj || p.children.includes(obj));
+        if (!root.userData.unlocked) {
+          root.userData.unlocked = true;
+          root.traverse(child => {
+            if (child.isMesh) child.material.emissive = new THREE.Color(0xffff00);
+          });
+          unlockedCount++;
+          unlockSound.play();
+          showUnlockMessage("🔓 Project " + unlockedCount + " Unlocked!");
+          updateHUD();
+          teleportToProject(projects.indexOf(root));
+          showDescription(root.userData.descIndex);
+          if (unlockedCount === projects.length) {
+            setTimeout(() => {
+              showUnlockMessage("🎉 All Projects Unlocked! Welcome to the Elite Zone!");
+              showTrophy();
+            }, 1000);
+          }
+        }
+      }
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      projects.forEach(p => {
+        if (p.userData.unlocked) p.rotation.y += 0.005;
+      });
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
